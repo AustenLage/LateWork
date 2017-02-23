@@ -15,6 +15,8 @@
 #include <StaticConstants.au3>
 #include <WindowsConstants.au3>
 #include <MsgBoxConstants.au3>
+#include <ComboConstants.au3>
+#include <GUIListBox.au3>
 
 Global $bPrompt1 = 0
 
@@ -75,6 +77,7 @@ Func _MainGUI()
 	GUISetState(@SW_SHOW)
 	#EndRegion MAINGUI
 
+	#Region MainGUIWhileLoop
 	While 1
 		$nMsg = GUIGetMsg()
 		Switch $nMsg
@@ -97,40 +100,87 @@ Func _MainGUI()
 				GUISetState(@SW_DISABLE)
 				If $bPrompt1 = 0 Then
 					$bPrompt1 = 1
-					MsgBox(0, "", "[CLASS/PERIOD SELECTION GUI GOES HERE]")
+					_ClassesPeriodsGUI()
 				Else
 					If MsgBox(4 + 4096, "Make Changes?", "Would you like to edit the classes/periods you previously selected?") = 6 Then
 						WinActivate("LateWork")
-						MsgBox(0, "", "[CLASS/PERIOD SELECTION GUI GOES HERE]")
+						_ClassesPeriodsGUI()
 					EndIf
 				EndIf
 				GUISetState(@SW_ENABLE)
 				WinActivate("LateWork")
 			Case $Button3 ;Date help button
 				GUISetState(@SW_DISABLE)
-				MsgBox(0, "", "DATE HELP")
+				_UserHelp("Date")
 				GUISetState(@SW_ENABLE)
 				WinActivate("LateWork")
 			Case $Button4 ;Class period help button
 				GUISetState(@SW_DISABLE)
-				MsgBox(0, "", "CLASS PERIOD HELP")
+				_UserHelp("Class")
 				GUISetState(@SW_ENABLE)
 				WinActivate("LateWork")
 			Case $Button5 ;Search location help button
 				GUISetState(@SW_DISABLE)
-				MsgBox(0, "", "SEARCH LOCATION HELP")
+				_UserHelp("Location")
 				GUISetState(@SW_ENABLE)
 				WinActivate("LateWork")
 			Case $Button6 ;Percentage Help button
 				GUISetState(@SW_DISABLE)
-				MsgBox(0, "", "PERCENTAGE HELP")
+				_UserHelp("Percentage")
 				GUISetState(@SW_ENABLE)
 				WinActivate("LateWork")
 			Case $Button7 ;Continue Button
-				MsgBox(0, "", $bPrompt1) ;DEBUGGING
+				MsgBox(0, "debug", $bPrompt1) ;DEBUGGING
 		EndSwitch
 		If GUICtrlRead($Label8) <> GUICtrlRead($Slider1 & "%") Then ;
 			GUICtrlSetData($Label8, GUICtrlRead($Slider1) & "%") ;Sets live slider value at bottom of slider
 		EndIf ;
 	WEnd
+	#EndRegion MainGUIWhileLoop
 EndFunc   ;==>_MainGUI
+
+Func _ClassesPeriodsGUI()
+	#Region Classes/PeriodsGUI
+	$ClassesPeriodsGUI = GUICreate("Classes/Periods Selection", 322, 314, 258, 223)
+	$Combo_ClassPeriod = GUICtrlCreateCombo("Please Select a Class Period to add", 48, 16, 225, 25)
+	$Button_AddList = GUICtrlCreateButton("ADD TO LIST", 96, 42, 129, 41, $WS_GROUP)
+	GUICtrlSetFont(-1, 8, 800, 0, "MS Sans Serif")
+	GUICtrlSetColor(-1, 0x000000)
+	GUICtrlSetTip(-1, "Add above slected period to the search list")
+	$List_SearchList = GUICtrlCreateList("", 48, 88, 225, 175)
+	$Button_RemoveList = GUICtrlCreateButton("REMOVE SELECTED", 96, 267, 129, 41, $WS_GROUP)
+	GUICtrlSetFont(-1, 8, 800, 0, "MS Sans Serif")
+	GUICtrlSetColor(-1, 0x000000)
+	GUICtrlSetTip(-1, "Add above slected period to the search list")
+	GUISetState(@SW_SHOW)
+	#EndRegion Classes/PeriodsGUI
+
+	#Region Classes/PeriodsGUIWhileLoop
+	While 1
+		$nMsg = GUIGetMsg()
+		Switch $nMsg
+			Case $GUI_EVENT_CLOSE
+				GUIDelete($ClassesPeriodsGUI)
+				Return
+			Case $Button_RemoveList
+		EndSwitch
+	WEnd
+	#EndRegion Classes/PeriodsGUIWhileLoop
+EndFunc   ;==>_ClassesPeriodsGUI
+
+Func _UserHelp($iHelpInfo)
+	#Region UserHelp
+	Switch $iHelpInfo
+		Case "Date"
+			MsgBox(0, "placeholder", "Date help")
+		Case "Class"
+			MsgBox(0, "placeholder", "Class help")
+		Case "Location"
+			MsgBox(0, "placeholder", "Location help")
+		Case "Percentage"
+			MsgBox(0, "placeholder", "Percentage help")
+		Case Else
+			Return
+	EndSwitch
+	#EndRegion UserHelp
+EndFunc   ;==>_UserHelp
