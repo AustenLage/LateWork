@@ -4,7 +4,7 @@
 	Author:         Austen Lage
 
 	Script Function:
-	Simplify grading process for some services.
+	Simplify grading process for some services (edpuzzle and edmodo).
 
 #ce ----------------------------------------------------------------------------
 
@@ -17,8 +17,23 @@
 #include <MsgBoxConstants.au3>
 #include <ComboConstants.au3>
 #include <GUIListBox.au3>
+#include <Array.au3>
 
-Global $bPrompt1 = 0
+#AutoIt3Wrapper_If_Run
+	#AutoIt3Wrapper_Run_AU3Check=Y
+	#AutoIt3Wrapper_Run_Tidy=N
+#Autoit3Wrapper_If_Compile
+	#AutoIt3Wrapper_OutFile="LateWork.exe"
+	#AutoIt3Wrapper_Run_AU3Stripper=Y
+	#AutoIt3Wrapper_Run_AU3Check=Y
+	#AutoIt3Wrapper_Run_Tidy=Y
+	#AutoIt3Wrapper_Compression=4
+	#AutoIt3Wrapper_Res_Description="LateWork - Makes fining students with late work easy!"
+#AutoIt3wrapper_EndIf
+
+Global $bPrompt1 = 0, $List_SearchList, $Combo_ClassPeriod, $aClassListMemory[8], $Radio1
+
+$aClassListMemory[0] = "0"
 
 _MainGUI()
 
@@ -86,21 +101,27 @@ Func _MainGUI()
 					Exit
 				EndIf
 			Case $Radio1 ;All Classes/Periods radio
-				If $bPrompt1 = 1 Then
-					GUICtrlSetState($Radio2, $GUI_CHECKED)
-					GUISetState(@SW_DISABLE)
-					If MsgBox(4 + 4096, "Are you sure?", "Are you sure you would like to erase your previously selected classes/periods?") = 6 Then
-						$bPrompt1 = 0
-						GUICtrlSetState($Radio1, $GUI_CHECKED)
+				If $aClassListMemory[0] <> "0" Then
+					If $bPrompt1 = 1 Then
+						GUICtrlSetState($Radio2, $GUI_CHECKED)
+						GUISetState(@SW_DISABLE)
+						If MsgBox(4 + 4096, "Are you sure?", "Are you sure you would like to erase your previously selected classes/periods?") = 6 Then
+							$bPrompt1 = 0
+							_DeleteClassList()
+							GUICtrlSetState($Radio1, $GUI_CHECKED)
+						EndIf
+						GUISetState(@SW_ENABLE)
+						WinActivate("LateWork")
 					EndIf
-					GUISetState(@SW_ENABLE)
-					WinActivate("LateWork")
 				EndIf
 			Case $Radio2 ;Specific classes/periods radio (prompt for details)
 				GUISetState(@SW_DISABLE)
-				If $bPrompt1 = 0 Then
+				If $aClassListMemory[0] = "0" Then
 					$bPrompt1 = 1
 					_ClassesPeriodsGUI()
+					If $aClassListMemory[0] = "0" Then
+						GUICtrlSetState($Radio1, $GUI_CHECKED)
+					EndIf
 				Else
 					If MsgBox(4 + 4096, "Make Changes?", "Would you like to edit the classes/periods you previously selected?") = 6 Then
 						WinActivate("LateWork")
@@ -131,6 +152,7 @@ Func _MainGUI()
 				WinActivate("LateWork")
 			Case $Button7 ;Continue Button
 				MsgBox(0, "debug", $bPrompt1) ;DEBUGGING
+				_ArrayDisplay($aClassListMemory)
 		EndSwitch
 		If GUICtrlRead($Label8) <> GUICtrlRead($Slider1 & "%") Then ;
 			GUICtrlSetData($Label8, GUICtrlRead($Slider1) & "%") ;Sets live slider value at bottom of slider
@@ -141,17 +163,26 @@ EndFunc   ;==>_MainGUI
 
 Func _ClassesPeriodsGUI()
 	#Region Classes/PeriodsGUI
-	$ClassesPeriodsGUI = GUICreate("Classes/Periods Selection", 322, 314, 258, 223)
+	$aPos = WinGetPos("LateWork")
+	$ClassesPeriodsGUI = GUICreate("Classes/Periods Selection", 322, 314, $aPos[0] + 175, $aPos[1] - 40)
 	$Combo_ClassPeriod = GUICtrlCreateCombo("Please Select a Class Period to add", 48, 16, 225, 25)
+	GUICtrlSetData($Combo_ClassPeriod, "example1|example2|example3|example4|example5") ;example classes to create code for search list (this combo will later be populated by a different function)
 	$Button_AddList = GUICtrlCreateButton("ADD TO LIST", 96, 42, 129, 41, $WS_GROUP)
 	GUICtrlSetFont(-1, 8, 800, 0, "MS Sans Serif")
 	GUICtrlSetColor(-1, 0x000000)
 	GUICtrlSetTip(-1, "Add above slected period to the search list")
 	$List_SearchList = GUICtrlCreateList("", 48, 88, 225, 175)
+	If $aClassListMemory[0] <> "0" Then
+		For $i = 0 To 7
+			If $aClassListMemory[$i] <> "0" Then
+				GUICtrlSetData($List_SearchList, $aClassListMemory[$i])
+			EndIf
+		Next
+	EndIf
 	$Button_RemoveList = GUICtrlCreateButton("REMOVE SELECTED", 96, 267, 129, 41, $WS_GROUP)
 	GUICtrlSetFont(-1, 8, 800, 0, "MS Sans Serif")
 	GUICtrlSetColor(-1, 0x000000)
-	GUICtrlSetTip(-1, "Add above slected period to the search list")
+	GUICtrlSetTip(-1, "Add above selected period to the search list")
 	GUISetState(@SW_SHOW)
 	#EndRegion Classes/PeriodsGUI
 
@@ -160,9 +191,19 @@ Func _ClassesPeriodsGUI()
 		$nMsg = GUIGetMsg()
 		Switch $nMsg
 			Case $GUI_EVENT_CLOSE
-				GUIDelete($ClassesPeriodsGUI)
-				Return
+				If _GUICtrlListBox_GetText($List_SearchList, 1) == 0 Then
+					GUICtrlSetState($Radio1, $GUI_CHECKED)
+					GUIDelete($ClassesPeriodsGUI)
+					Return
+				Else
+					_RememberClassList()
+					GUIDelete($ClassesPeriodsGUI)
+					Return
+				EndIf
+			Case $Button_AddList
+				_AddList()
 			Case $Button_RemoveList
+				_RemoveList()
 		EndSwitch
 	WEnd
 	#EndRegion Classes/PeriodsGUIWhileLoop
@@ -184,3 +225,41 @@ Func _UserHelp($iHelpInfo)
 	EndSwitch
 	#EndRegion UserHelp
 EndFunc   ;==>_UserHelp
+
+Func _AddList()
+	Local $sClass = GUICtrlRead($Combo_ClassPeriod)
+	If $sClass = "Please Select a Class Period to add" Then
+		MsgBox(4144, "Oops!", "Please select a class period to add to the list from the dropdown menu!")
+		Return
+	Else
+		GUICtrlSetData($List_SearchList, $sClass)
+	EndIf
+EndFunc   ;==>_AddList
+
+Func _RemoveList()
+	Local $sClass = GUICtrlRead($List_SearchList)
+	Local $iListPosition = _GUICtrlListBox_GetCaretIndex($List_SearchList)
+	If $sClass = "" Then
+		MsgBox(4144, "Oops!", "There is no list item selected!")
+	Else
+		_GUICtrlListBox_DeleteString($List_SearchList, $iListPosition)
+		$aClassListMemory[$iListPosition] = "0"
+		Return
+	EndIf
+EndFunc   ;==>_RemoveList
+
+Func _RememberClassList()
+	For $i = 0 To 7
+		If _GUICtrlListBox_GetText($List_SearchList, $i) == 0 Then
+			$aClassListMemory[$i] = "0"
+		Else
+			$aClassListMemory[$i] = _GUICtrlListBox_GetText($List_SearchList, $i)
+		EndIf
+	Next
+EndFunc   ;==>_RememberClassList
+
+Func _DeleteClassList()
+	For $i = 0 To 7
+		$aClassListMemory[$i] = "0"
+	Next
+EndFunc   ;==>_DeleteClassList
